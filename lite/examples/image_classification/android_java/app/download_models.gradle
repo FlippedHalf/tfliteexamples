@@ -14,34 +14,70 @@
  * limitations under the License.
  */
 
+//
+// === 头部说明 ===
+//
+// 这是一个 Gradle "脚本插件" (Script Plugin)。
+// 这种模式允许我们将一部分构建逻辑从主 `build.gradle` 文件中分离出来，使构建脚本更清晰、更模块化。
+//
+// 本脚本专门负责定义和配置"下载模型"的任务。
+//
+// 这些任务在何时触发？
+// 通过文件底部的 `preBuild.dependsOn ...` 配置，这些下载任务被挂载到了 Gradle 构建生命周期的 `preBuild` 阶段。
+// 这意味着，每次执行构建操作时（例如，点击 "Run" 或 "Build" 按钮），Gradle 会在编译任何代码之前，自动执行此文件中的下载任务，
+// 确保所有必需的模型文件都已准备就绪。
+//
+// 此脚本由 `app/build.gradle` 文件中的 `apply from: 'download_models.gradle'` 语句引入和执行。
+//
+
+/**
+ * 定义一个名为 'downloadModelFile' 的下载任务。
+ * `type: Download` 指定了此任务使用 `de.undercouch.download` 插件提供的下载功能。
+ */
 task downloadModelFile(type: Download) {
+    // src: 指定要下载的文件的源 URL，这里是 MobileNet v1 模型。
     src 'https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/image_classification/android_java/mobilenet_v1_1.0_224_quantized_1_metadata_1.tflite'
+    // dest: 指定下载后文件的存放位置和文件名。
+    // `project.ext.ASSET_DIR` 是在 app/build.gradle 中定义的变量，指向 `src/main/assets` 目录。
     dest project.ext.ASSET_DIR + '/mobilenetv1.tflite'
+    // overwrite: 如果目标文件已存在，则不重新下载。
     overwrite false
 }
 
+// 定义下载 EfficientNet-Lite0 模型的任务
 task downloadModelFile0(type: Download) {
     src 'https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/image_classification/android_java/efficientnet_lite0_int8_2.tflite'
     dest project.ext.ASSET_DIR + '/efficientnet-lite0.tflite'
     overwrite false
 }
 
+// 定义下载 EfficientNet-Lite1 模型的任务
 task downloadModelFile1(type: Download) {
     src 'https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/image_classification/android_java/efficientnet_lite1_int8_2.tflite'
     dest project.ext.ASSET_DIR + '/efficientnet-lite1.tflite'
     overwrite false
 }
 
+// 定义下载 EfficientNet-Lite2 模型的任务
 task downloadModelFile2(type: Download) {
     src 'https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/image_classification/android_java/efficientnet_lite2_int8_2.tflite'
     dest project.ext.ASSET_DIR + '/efficientnet-lite2.tflite'
     overwrite false
 }
 
+/**
+ * 定义一个文件复制任务，用于将下载好的模型复制到测试资源目录中。
+ * `dependsOn: downloadModelFile` 确保在执行复制之前，`downloadModelFile` 任务已经完成。
+ */
 task copyTestModel(type: Copy, dependsOn: downloadModelFile) {
+    // from: 指定要复制的源文件。
     from project.ext.ASSET_DIR + '/mobilenetv1.tflite'
+    // into: 指定复制的目标目录。
+    // `project.ext.TEST_ASSETS_DIR` 指向 `src/androidTest/assets` 目录。
     into project.ext.TEST_ASSETS_DIR
 }
 
+// 将上面定义的所有下载和复制任务添加为 `preBuild` 任务的依赖。
+// 这确保了在项目开始构建之前，所有这些任务都会被执行。
 preBuild.dependsOn downloadModelFile, downloadModelFile0, downloadModelFile1, downloadModelFile2,
         copyTestModel
